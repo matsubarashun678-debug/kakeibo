@@ -416,30 +416,38 @@ async function graphRequest(url, options = {}) {
   return res.json();
 }
 
+// Convert a JS Date to Excel serial date number
+function dateToExcelSerial(date) {
+  // Excel epoch: 1900-01-01 = serial 1
+  // But Excel has a bug treating 1900 as leap year, so dates after Feb 28 1900 are off by 1
+  const epoch = new Date(1899, 11, 30); // Dec 30, 1899
+  const diff = date.getTime() - epoch.getTime();
+  return Math.round(diff / 86400000);
+}
+
 // Find the row for a given date in the Excel sheet
 async function findDateRow(dateStr) {
-  // Read column A to find the matching date row
-  // The sheet likely has dates in column A starting from some row
-  // We'll read a range and search
   const encoded = encodeURIComponent(FILE_PATH);
   const sheetEncoded = encodeURIComponent(SHEET_NAME);
 
-  // Read column A (dates) - assume data starts around row 4 and goes to row 400
+  // Read column A (dates)
   const data = await graphRequest(
     `/me/drive/root:${encoded}:/workbook/worksheets('${sheetEncoded}')/range(address='A1:A400')`
   );
 
   const values = data.values || [];
-  // dateStr format: "2026/2/11" - we need to match flexibly
-  const target = parseDateFlexible(dateStr);
+  
+  // Convert target date to Excel serial number
+  const targetDate = new Date(dateStr);
+  const targetSerial = dateToExcelSerial(targetDate);
 
   for (let i = 0; i < values.length; i++) {
     const cellVal = values[i][0];
-    if (!cellVal) continue;
+    if (cellVal === null || cellVal === '') continue;
 
-    // Try to parse the cell value as a date
-    const cellDate = parseDateFlexible(String(cellVal));
-    if (cellDate && cellDate.getTime() === target.getTime()) {
+    const num = Number(cellVal);
+    // Match by serial number (exact or within 0.5 to handle time components)
+    if (!isNaN(num) && Math.abs(num - targetSerial) < 0.5) {
       return i + 1; // 1-indexed row number
     }
   }
