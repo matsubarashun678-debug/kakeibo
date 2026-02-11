@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>家計簿入力</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi5a625aSn57Cg5YWl5YqbIiwic2hvcnRfbmFtZSI6IuWutuioiOewvyIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGYxNzJhIiwidGhlbWVfY29sb3IiOiIjMGYxNzJhIn0=">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.15);
+    --success: #34d399;
+    --success-glow: rgba(52, 211, 153, 0.2);
+    --error: #f87171;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+    padding-top: env(safe-area-inset-top, 16px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    padding: 8px 0;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, var(--accent), #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .auth-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .auth-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .auth-btn.connected {
+    border-color: var(--success);
+    color: var(--success);
+    background: var(--success-glow);
+  }
+
+  /* Date Picker */
+  .date-section {
+    margin-bottom: 20px;
+  }
+  .date-input-wrapper {
+    position: relative;
+  }
+  .date-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .date-input:focus { border-color: var(--accent); }
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  /* Category Grid */
+  .category-section { margin-bottom: 20px; }
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .category-btn {
+    padding: 12px 8px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .category-btn:active { transform: scale(0.96); }
+  .category-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-weight: 500;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.08);
+  }
+
+  /* Amount Input */
+  .amount-section { margin-bottom: 24px; }
+  .amount-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .amount-prefix {
+    position: absolute;
+    left: 16px;
+    font-size: 20px;
+    font-weight: 300;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .amount-input {
+    width: 100%;
+    padding: 16px 16px 16px 36px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .amount-input:focus { border-color: var(--accent); }
+  .amount-input::placeholder { color: var(--surface2); }
+
+  /* Quick Amount Buttons */
+  .quick-amounts {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .quick-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .quick-btn:active { transform: scale(0.95); }
+  .quick-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* Submit Button */
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--radius);
+    border: none;
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    color: #0f172a;
+    font-size: 16px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+  }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .submit-btn.loading {
+    color: transparent;
+  }
+  .submit-btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    top: 50%; left: 50%;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(15,23,42,0.3);
+    border-top-color: #0f172a;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 16px) + 24px);
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 14px 24px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.success {
+    background: var(--success);
+    color: #064e3b;
+  }
+  .toast.error {
+    background: var(--error);
+    color: #7f1d1d;
+  }
+
+  /* History */
+  .history-section {
+    margin-top: 32px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    font-size: 14px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } }
+  .history-cat { color: var(--text-muted); }
+  .history-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .history-date {
+    font-size: 11px;
+    color: var(--surface2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Login screen */
+  .login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70dvh;
+    text-align: center;
+    gap: 24px;
+  }
+  .login-screen h2 {
+    font-size: 24px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .login-screen p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .login-btn {
+    padding: 14px 32px;
+    border-radius: var(--radius);
+    border: none;
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    color: #0f172a;
+    font-size: 16px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .login-btn:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG - ここにクライアントIDを貼り付けてください
+// ============================================================
+const CLIENT_ID = 'ada8076c-5d33-4fe0-b148-5362413e468f';
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+const SCOPES = 'Files.ReadWrite';
+const FILE_PATH = '/個人PL_2026.xlsx';
+const SHEET_NAME = '家計簿(実績)';
+
+// Category mapping: name -> Excel column letter
+const CATEGORIES = [
+  { name: '食費', col: 'C' },      // 総支出 is C but based on the screenshot, 
+  { name: '日用品費', col: 'D' },
+  { name: '娯楽費', col: 'E' },
+  { name: '交際費', col: 'F' },
+  { name: '交通費', col: 'G' },
+  { name: '教育費', col: 'H' },
+  { name: '医療費', col: 'I' },
+  { name: '水道光熱費', col: 'J' },
+  { name: '通信費', col: 'K' },
+  { name: '特別費', col: 'L' },
+  { name: '雑費', col: 'M' },
+];
+
+// ============================================================
+// State
+// ============================================================
+let accessToken = null;
+let selectedCategory = null;
+let history = [];
+
+// ============================================================
+// Auth
+// ============================================================
+function getAuthUrl() {
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'token',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    response_mode: 'fragment',
+  });
+  return `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${params}`;
+}
+
+function checkAuthRedirect() {
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    accessToken = params.get('access_token');
+    // Clear hash
+    window.history.replaceState(null, '', window.location.pathname);
+    return true;
+  }
+  return false;
+}
+
+function login() {
+  window.location.href = getAuthUrl();
+}
+
+function logout() {
+  accessToken = null;
+  render();
+}
+
+// ============================================================
+// Graph API
+// ============================================================
+async function graphRequest(url, options = {}) {
+  const res = await fetch(`https://graph.microsoft.com/v1.0${url}`, {
+    ...options,
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Find the row for a given date in the Excel sheet
+async function findDateRow(dateStr) {
+  // Read column A to find the matching date row
+  // The sheet likely has dates in column A starting from some row
+  // We'll read a range and search
+  const encoded = encodeURIComponent(FILE_PATH);
+  const sheetEncoded = encodeURIComponent(SHEET_NAME);
+
+  // Read column A (dates) - assume data starts around row 4 and goes to row 400
+  const data = await graphRequest(
+    `/me/drive/root:${encoded}:/workbook/worksheets('${sheetEncoded}')/range(address='A1:A400')`
+  );
+
+  const values = data.values || [];
+  // dateStr format: "2026/2/11" - we need to match flexibly
+  const target = parseDateFlexible(dateStr);
+
+  for (let i = 0; i < values.length; i++) {
+    const cellVal = values[i][0];
+    if (!cellVal) continue;
+
+    // Try to parse the cell value as a date
+    const cellDate = parseDateFlexible(String(cellVal));
+    if (cellDate && cellDate.getTime() === target.getTime()) {
+      return i + 1; // 1-indexed row number
+    }
+  }
+  return null;
+}
+
+function parseDateFlexible(str) {
+  if (!str) return null;
+
+  // Handle Excel serial date number
+  const num = Number(str);
+  if (!isNaN(num) && num > 40000 && num < 60000) {
+    // Excel serial date: days since 1900-01-01 (with the 1900 leap year bug)
+    const excelEpoch = new Date(1899, 11, 30);
+    const d = new Date(excelEpoch.getTime() + num * 86400000);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // Remove day-of-week suffixes like "（月）" or " 月"
+  const cleaned = str.replace(/[\s(（].*$/, '').trim();
+
+  // Try yyyy/m/d or yyyy-m-d
+  const match = cleaned.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (match) {
+    return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+  }
+
+  // Try Date.parse as fallback
+  const d = new Date(cleaned);
+  if (!isNaN(d.getTime())) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  return null;
+}
+
+// Add amount to a specific cell
+async function addAmountToCell(row, col, amount) {
+  const encoded = encodeURIComponent(FILE_PATH);
+  const sheetEncoded = encodeURIComponent(SHEET_NAME);
+  const cellAddr = `${col}${row}`;
+
+  // First read current value
+  let currentVal = 0;
+  try {
+    const current = await graphRequest(
+      `/me/drive/root:${encoded}:/workbook/worksheets('${sheetEncoded}')/range(address='${cellAddr}')`
+    );
+    const v = current.values?.[0]?.[0];
+    if (v !== null && v !== '' && !isNaN(Number(v))) {
+      currentVal = Number(v);
+    }
+  } catch (e) {
+    // Cell might be empty, that's ok
+  }
+
+  const newVal = currentVal + amount;
+
+  // Write new value
+  await graphRequest(
+    `/me/drive/root:${encoded}:/workbook/worksheets('${sheetEncoded}')/range(address='${cellAddr}')`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        values: [[newVal]],
+      }),
+    }
+  );
+
+  return { previous: currentVal, new: newVal };
+}
+
+// ============================================================
+// Main submit
+// ============================================================
+async function submit() {
+  const dateInput = document.getElementById('dateInput');
+  const amountInput = document.getElementById('amountInput');
+  const submitBtn = document.getElementById('submitBtn');
+
+  const dateVal = dateInput.value;
+  const amount = parseInt(amountInput.value, 10);
+
+  if (!selectedCategory) { showToast('カテゴリを選択してください', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('金額を入力してください', 'error'); return; }
+
+  submitBtn.disabled = true;
+  submitBtn.classList.add('loading');
+
+  try {
+    // Format date for matching
+    const d = new Date(dateVal);
+    const dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+
+    // Find row
+    const row = await findDateRow(dateStr);
+    if (!row) {
+      showToast(`${dateStr} の行が見つかりません`, 'error');
+      return;
+    }
+
+    // Find category column
+    const cat = CATEGORIES.find(c => c.name === selectedCategory);
+    if (!cat) { showToast('カテゴリエラー', 'error'); return; }
+
+    // Add amount
+    const result = await addAmountToCell(row, cat.col, amount);
+
+    // Success
+    showToast(`${cat.name} ¥${amount.toLocaleString()} 加算完了`, 'success');
+
+    // Add to history
+    history.unshift({ date: dateStr, category: cat.name, amount, time: new Date() });
+    renderHistory();
+
+    // Reset amount
+    amountInput.value = '';
+    selectedCategory = null;
+    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+
+  } catch (e) {
+    console.error(e);
+    showToast(`エラー: ${e.message}`, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('loading');
+  }
+}
+
+// ============================================================
+// UI Helpers
+// ============================================================
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = `toast ${type} show`;
+  setTimeout(() => { toast.classList.remove('show'); }, 2500);
+}
+
+function selectCategory(name) {
+  selectedCategory = name;
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.cat === name);
+  });
+}
+
+function addQuickAmount(val) {
+  const input = document.getElementById('amountInput');
+  const current = parseInt(input.value, 10) || 0;
+  input.value = current + val;
+}
+
+function getToday() {
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+function renderHistory() {
+  const container = document.getElementById('historyList');
+  if (!container) return;
+  if (history.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0;">入力履歴なし</p>';
+    return;
+  }
+  container.innerHTML = history.map(h => `
+    <div class="history-item">
+      <div>
+        <span class="history-cat">${h.category}</span>
+        <span class="history-date" style="margin-left:8px;">${h.date}</span>
+      </div>
+      <span class="history-amount">¥${h.amount.toLocaleString()}</span>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// Render
+// ============================================================
+function render() {
+  const app = document.getElementById('app');
+
+  if (!accessToken) {
+    app.innerHTML = `
+      <div class="login-screen">
+        <h2>家計簿入力</h2>
+        <p>OneDriveのExcel家計簿に<br>外出先からサクッと入力</p>
+        <button class="login-btn" onclick="login()">Microsoftでログイン</button>
+      </div>
+    `;
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="header">
+      <h1>家計簿入力</h1>
+      <button class="auth-btn connected" onclick="logout()">接続中 ●</button>
+    </div>
+
+    <div class="date-section">
+      <span class="section-label">日付</span>
+      <div class="date-input-wrapper">
+        <input type="date" id="dateInput" class="date-input" value="${getToday()}">
+      </div>
+    </div>
+
+    <div class="category-section">
+      <span class="section-label">カテゴリ</span>
+      <div class="category-grid">
+        ${CATEGORIES.map(c => `
+          <button class="category-btn" data-cat="${c.name}" onclick="selectCategory('${c.name}')">${c.name}</button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="amount-section">
+      <span class="section-label">金額</span>
+      <div class="amount-wrapper">
+        <span class="amount-prefix">¥</span>
+        <input type="number" id="amountInput" class="amount-input" placeholder="0" inputmode="numeric" pattern="[0-9]*">
+      </div>
+      <div class="quick-amounts">
+        <button class="quick-btn" onclick="addQuickAmount(100)">+100</button>
+        <button class="quick-btn" onclick="addQuickAmount(500)">+500</button>
+        <button class="quick-btn" onclick="addQuickAmount(1000)">+1K</button>
+        <button class="quick-btn" onclick="addQuickAmount(5000)">+5K</button>
+        <button class="quick-btn" onclick="addQuickAmount(10000)">+10K</button>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submit()">加算する</button>
+
+    <div class="history-section">
+      <span class="section-label">今回の入力履歴</span>
+      <div id="historyList"></div>
+    </div>
+  `;
+
+  renderHistory();
+}
+
+// ============================================================
+// Init
+// ============================================================
+checkAuthRedirect();
+render();
+</script>
+</body>
+</html>
